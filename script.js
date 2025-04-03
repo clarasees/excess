@@ -1,3 +1,5 @@
+import { remove } from 'https://cdn.jsdelivr.net/npm/background-removal-js';
+window.removeBackground = remove;
 
 // drag and drop
 
@@ -19,7 +21,10 @@ dropArea.addEventListener('drop', (e) => {
   if (files.length > 0) {
     handleFile(files[0]);
   }
+
 });
+
+
 
 dropArea.addEventListener('click', () => {
   const input = document.createElement('input');
@@ -37,32 +42,29 @@ dropArea.addEventListener('click', () => {
 function handleFile(file) {
   if (!file.type.startsWith('image/')) {
     alert('Please upload an image file.');
+    console.log("if is working!");
     return;
   }
+  console.log("drop is working!");  
 
 // remove.bg
 
-  const formData = new FormData();
-  formData.append('image_file', file);
-  formData.append('size', 'auto');
+const img = document.createElement('img');
+img.src = URL.createObjectURL(file);
 
-  fetch('https://api.remove.bg/v1.0/removebg', {
-    method: 'POST',
-    headers: {
-      'X-Api-Key': 'b2rrpYqtm1c79UPFfusgev82'
-    },
-    body: formData
-  })
-  .then(response => response.blob())
-  .then(blob => {
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(blob);
-    img.onload = () => {
-      convertToVector(img);
-    };
-    dropArea.innerHTML = '';
-    dropArea.appendChild(img);
-  })
+img.onload = async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    // use background-removal-js 
+    const processedCanvas = await removeBackground(img);
+
+    dropArea.innerHTML = ''; // clear the drop area
+    dropArea.appendChild(processedCanvas); // display processed image
+
   .catch(error => {
     console.error('Error:', error);
     alert('Failed to remove background.');
@@ -70,33 +72,25 @@ function handleFile(file) {
 }
 
 
+   // Convert processed image to vector
+   convertToVector(processedCanvas);
+  };
 
-//edge detector, turn to SVG
-
-//Douglas Peucker algorithm, or turn into lowpoly vector
-
-function convertToVector(image) {
-    const canvas = document.createElement('canvas');
-    canvas.width = image.width;
-    canvas.height = image.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0);
-  console.log("working")
+  function convertToVector(canvas) {
     const imgData = canvas.toDataURL('image/png');
 
     const options = {
-      colorsampling: 0,
-      numberofcolors: 2,
-      pathomit: 8,
-      ltres: 1,
-      qtres: 1,
-      roundcoords: 1,
-      lcpr: 0,
-      qcpr: 0,
+        colorsampling: 0,
+        numberofcolors: 2,
+        pathomit: 8,
+        ltres: 1,
+        qtres: 1,
+        lcpr: 0,
+        qcpr: 0,
     };
 
     ImageTracer.imageToSVG(imgData, function(svgString) {
-      dropArea.innerHTML = '';
-      dropArea.innerHTML = svgString;
+        dropArea.innerHTML = ''; // Clear the drop area
+        dropArea.innerHTML = svgString; // Display SVG
     }, options);
-  }
+}
